@@ -7,8 +7,8 @@ Select images → right-click → **Quick Actions → Create GIF**.
 
 - No dependencies: uses only built-in macOS frameworks (ImageIO via JavaScript for Automation).
 - Frames are ordered by file name (natural sort, so `2.png` comes before `10.png`).
-- Asks for the delay per frame (default 0.5 s).
-- Frames are scaled to at most 800 px on the longest side, respecting EXIF orientation.
+- Asks for the delay per frame (default 0.5 s) and the resolution as a percentage of the original size (default 50 %).
+- Frames are scaled accordingly (never upscaled), respecting EXIF orientation.
 - The GIF loops forever and is saved as `animation.gif` next to the first image (`animation 2.gif`, … if it already exists).
 - Works with any image format macOS can read (PNG, JPEG, HEIC, TIFF, …).
 
@@ -38,7 +38,7 @@ If **Create GIF** doesn't show up in the right-click menu, open
 
 1. In Finder, select two or more images.
 2. Right-click → **Quick Actions → Create GIF**.
-3. Enter the number of seconds per frame and click **Create**.
+3. Enter the number of seconds per frame and click **Next**, then the resolution in % and click **Create**.
 4. `animation.gif` appears in the same folder.
 
 The first time you use it in a protected folder (Desktop, Documents, Downloads), macOS may ask for permission.
@@ -50,7 +50,7 @@ Open `~/Library/Services/Create GIF.workflow` in Automator to edit the script. U
 | Variable | Default | Meaning |
 |----------|---------|---------|
 | `delay`  | `0.5`   | Default seconds per frame shown in the dialog |
-| `maxPx`  | `800`   | Maximum width/height of each frame, in pixels |
+| `scale`  | `50`    | Default resolution (% of original size) shown in the dialog |
 
 The same script is available on its own in [`src/create-gif.sh`](src/create-gif.sh), which you can run from the terminal:
 

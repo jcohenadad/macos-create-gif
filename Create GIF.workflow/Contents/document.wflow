@@ -65,6 +65,7 @@
 /usr/bin/osascript -l JavaScript - "$@" &lt;&lt;'JXA'
 ObjC.import('Foundation');
 ObjC.import('ImageIO');
+ObjC.import('CoreGraphics');
 
 function run(argv) {
   var app = Application.currentApplication();
@@ -75,18 +76,26 @@ function run(argv) {
   });
   if (files.length === 0) return;
 
-  // Ask for frame delay and max size
-  var delay = 0.5, maxPx = 800;
-  try {
-    var r = app.displayDialog('Seconds per frame (' + files.length + ' images):', {
-      defaultAnswer: '0.5', withTitle: 'Create GIF',
-      buttons: ['Cancel', 'Create'], defaultButton: 'Create', cancelButton: 'Cancel'
-    });
-    var d = parseFloat(String(r.textReturned).replace(',', '.'));
-    if (d &gt; 0) delay = d;
-  } catch (e) {
-    if (e.errorNumber === -128) return; // user cancelled
+  // Ask for frame delay and resolution (% of original size)
+  var delay = 0.5, scale = 50;
+  function ask(prompt, def, button) {
+    try {
+      var r = app.displayDialog(prompt, {
+        defaultAnswer: String(def), withTitle: 'Create GIF',
+        buttons: ['Cancel', button], defaultButton: button, cancelButton: 'Cancel'
+      });
+      var v = parseFloat(String(r.textReturned).replace(',', '.').replace('%', ''));
+      return v &gt; 0 ? v : def;
+    } catch (e) {
+      if (e.errorNumber === -128) return null; // user cancelled
+      return def;
+    }
   }
+  delay = ask('Seconds per frame (' + files.length + ' images):', delay, 'Next');
+  if (delay === null) return;
+  scale = ask('Resolution (% of original size):', scale, 'Create');
+  if (scale === null) return;
+  scale = Math.min(scale, 100);
 
   // Output path: &lt;folder of first image&gt;/animation.gif (unique)
   var fm = $.NSFileManager.defaultManager;
@@ -105,15 +114,21 @@ function run(argv) {
       $([$.NSNumber.numberWithDouble(delay), $.NSNumber.numberWithDouble(delay)]),
       $([$('DelayTime'), $('UnclampedDelayTime')])), $('{GIF}'));
 
-  var thumbOpts = $.NSDictionary.dictionaryWithObjectsForKeys(
-    $([$.NSNumber.numberWithBool(true), $.NSNumber.numberWithBool(true), $.NSNumber.numberWithInt(maxPx)]),
-    $([$('kCGImageSourceCreateThumbnailFromImageAlways'), $('kCGImageSourceCreateThumbnailWithTransform'), $('kCGImageSourceThumbnailMaxPixelSize')]));
+  function thumbOpts(maxPx) {
+    return $.NSDictionary.dictionaryWithObjectsForKeys(
+      $([$.NSNumber.numberWithBool(true), $.NSNumber.numberWithBool(true), $.NSNumber.numberWithInt(maxPx)]),
+      $([$('kCGImageSourceCreateThumbnailFromImageAlways'), $('kCGImageSourceCreateThumbnailWithTransform'), $('kCGImageSourceThumbnailMaxPixelSize')]));
+  }
 
   var added = 0;
   files.forEach(function (f) {
     var src = $.CGImageSourceCreateWithURL($.NSURL.fileURLWithPath(f), $());
     if (!src || src.isNil &amp;&amp; src.isNil()) return;
-    var img = $.CGImageSourceCreateThumbnailAtIndex(src, 0, thumbOpts);
+    // Longest side of the original image, scaled by the chosen percentage
+    var full = $.CGImageSourceCreateImageAtIndex(src, 0, $());
+    if (!full || full.isNil &amp;&amp; full.isNil()) return;
+    var maxPx = Math.max(1, Math.round(Math.max($.CGImageGetWidth(full), $.CGImageGetHeight(full)) * scale / 100));
+    var img = $.CGImageSourceCreateThumbnailAtIndex(src, 0, thumbOpts(maxPx));
     if (!img || img.isNil &amp;&amp; img.isNil()) return;
     $.CGImageDestinationAddImage(dest, img, gifFrame);
     added++;
