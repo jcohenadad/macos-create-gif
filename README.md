@@ -8,6 +8,7 @@ Select images → right-click → **Quick Actions → Create GIF**.
 - No dependencies: uses only built-in macOS frameworks (ImageIO via JavaScript for Automation).
 - Frames are ordered by file name (natural sort, so `2.png` comes before `10.png`).
 - Asks for the delay per frame (default 0.5 s) and the resolution as a percentage of the original size (default 50 %).
+- Shows the resulting width × height in pixels, updated live as you change the percentage.
 - Frames are scaled accordingly (never upscaled), respecting EXIF orientation.
 - The GIF loops forever and is saved as `animation.gif` next to the first image (`animation 2.gif`, … if it already exists).
 - Works with any image format macOS can read (PNG, JPEG, HEIC, TIFF, …).
