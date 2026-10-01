@@ -38,7 +38,7 @@ If **Create GIF** doesn't show up in the right-click menu, open
 
 1. In Finder, select two or more images.
 2. Right-click → **Quick Actions → Create GIF**.
-3. Enter the number of seconds per frame and click **Next**, then the resolution in % and click **Create**.
+3. Enter the number of seconds per frame and the resolution in % (both in one dialog) and click **Create**.
 4. `animation.gif` appears in the same folder.
 
 The first time you use it in a protected folder (Desktop, Documents, Downloads), macOS may ask for permission.

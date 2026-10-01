@@ -4,6 +4,7 @@
 [ $# -eq 0 ] && exit 0
 /usr/bin/osascript -l JavaScript - "$@" <<'JXA'
 ObjC.import('Foundation');
+ObjC.import('AppKit');
 ObjC.import('ImageIO');
 ObjC.import('CoreGraphics');
 
@@ -16,26 +17,45 @@ function run(argv) {
   });
   if (files.length === 0) return;
 
-  // Ask for frame delay and resolution (% of original size)
+  // Ask for frame delay and resolution (% of original size) in one dialog
   var delay = 0.5, scale = 50;
-  function ask(prompt, def, button) {
-    try {
-      var r = app.displayDialog(prompt, {
-        defaultAnswer: String(def), withTitle: 'Create GIF',
-        buttons: ['Cancel', button], defaultButton: button, cancelButton: 'Cancel'
-      });
-      var v = parseFloat(String(r.textReturned).replace(',', '.').replace('%', ''));
-      return v > 0 ? v : def;
-    } catch (e) {
-      if (e.errorNumber === -128) return null; // user cancelled
-      return def;
-    }
+  // Launched from a background Quick Action, so become a (Dock-less) app and
+  // float the dialog above Finder; macOS may refuse to bring it to the front otherwise
+  $.NSApplication.sharedApplication;
+  $.NSApp.setActivationPolicy($.NSApplicationActivationPolicyAccessory);
+  $.NSApp.activateIgnoringOtherApps(true);
+  var alert = $.NSAlert.alloc.init;
+  alert.messageText = 'Create GIF';
+  alert.informativeText = files.length + ' images';
+  alert.addButtonWithTitle('Create');
+  alert.addButtonWithTitle('Cancel');
+  var view = $.NSView.alloc.initWithFrame($.NSMakeRect(0, 0, 260, 56));
+  function field(y, label, def) {
+    var l = $.NSTextField.labelWithString(label);
+    l.frame = $.NSMakeRect(0, y + 3, 170, 17);
+    view.addSubview(l);
+    var t = $.NSTextField.alloc.initWithFrame($.NSMakeRect(175, y, 85, 22));
+    t.stringValue = String(def);
+    view.addSubview(t);
+    return t;
   }
-  delay = ask('Seconds per frame (' + files.length + ' images):', delay, 'Next');
-  if (delay === null) return;
-  scale = ask('Resolution (% of original size):', scale, 'Create');
-  if (scale === null) return;
-  scale = Math.min(scale, 100);
+  var delayField = field(32, 'Seconds per frame:', delay);
+  var scaleField = field(0, 'Resolution (% of original):', scale);
+  delayField.nextKeyView = scaleField;
+  scaleField.nextKeyView = delayField;
+  alert.accessoryView = view;
+  alert.window.initialFirstResponder = delayField;
+  alert.layout;
+  alert.window.level = $.NSFloatingWindowLevel;
+  alert.window.center;
+  alert.window.orderFrontRegardless;
+  if (alert.runModal !== $.NSAlertFirstButtonReturn) return; // user cancelled
+  function num(t, def) {
+    var v = parseFloat(t.stringValue.js.replace(',', '.').replace('%', ''));
+    return v > 0 ? v : def;
+  }
+  delay = num(delayField, delay);
+  scale = Math.min(num(scaleField, scale), 100);
 
   // Output path: <folder of first image>/animation.gif (unique)
   var fm = $.NSFileManager.defaultManager;
